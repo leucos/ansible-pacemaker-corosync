@@ -1,0 +1,71 @@
+- name: Installs pacemaker & corosync
+  apt: pkg={{item}} state=latest
+  with_items:
+    - corosync
+    - pacemaker
+    - haveged
+
+- name: Generates corosync key
+  become: true
+  become_user: root
+  command: corosync-keygen
+  args:
+    creates: /etc/corosync/authkey
+  when: inventory_hostname == groups[pacemaker_corosync_group][0]
+  register: __corosync_authkey_created
+  notify: Restart corosync
+
+- name: Copy authkey to other nodes
+  synchronize: src=/etc/corosync/authkey dest=/etc/corosync/authkey
+  delegate_to: "{{ groups[pacemaker_corosync_group][0] }}"
+  when: inventory_hostname != groups[pacemaker_corosync_group][0]
+  notify: Restart corosync
+
+- name: Chowns authkeys
+  file:
+    path: /etc/corosync/authkey
+    mode: 0400
+    owner: root
+  notify: Restart corosync
+
+- name: Creates corosync config
+  template:
+    src: corosync.conf.j2
+    dest: /etc/corosync/corosync.conf
+    mode: 0400
+    owner: root
+  notify: Restart corosync
+
+- name: Adds logrotate config for corosync
+  template:
+    src: corosync_logrotate.conf.j2
+    dest: /etc/logrotate.d/corosync
+    mode: 0644
+    owner: root
+
+- name: Adds pacemaker service
+  copy:
+    src: pcmk
+    dest: /etc/corosync/service.d/pcmk
+    owner: root
+    mode: 0400
+  notify: Restart corosync
+
+- name: Adds ferm filtering
+  template:
+    src: "../templates/ferm.j2"
+    dest: /etc/ferm/filter-input.d/60_corosync.conf
+  when: ferm_enabled | default(false)
+  tags: ferm
+  notify: Restart ferm
+
+- name: Enables corosync at boot
+  copy:
+    dest: /etc/default/corosync
+    content: "START=yes"
+
+- name: Registers pacemaker service
+  service:
+    name: pacemaker
+    enabled: true
+

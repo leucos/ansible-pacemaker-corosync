@@ -1,0 +1,39 @@
+totem {
+  version: 2
+  cluster_name: {{ pacemaker_corosync_group }}
+  transport: udpu
+  interface {
+    ringnumber: 0
+    bindnetaddr: {{ hostvars[inventory_hostname]['ansible_' + pacemaker_corosync_ring_interface].ipv4.address }}
+    broadcast: yes
+    mcastport: 5405
+  }
+}
+
+quorum {
+  provider: corosync_votequorum
+{% if groups[pacemaker_corosync_group]|count == 2 %}
+  two_node: 1
+{% else %}
+  wait_for_all: 1
+  last_man_standing: 1
+{% endif %}
+}
+
+nodelist {
+{% for node in groups[pacemaker_corosync_group]|sort %}
+  node {
+    ring0_addr: {{ hostvars[node]['ansible_' + pacemaker_corosync_ring_interface].ipv4.address }}
+    name: {{ node }}
+    nodeid: {{ loop.index }}
+  }
+{% endfor %}
+}
+
+logging {
+  to_logfile: yes
+  logfile: /var/log/corosync/corosync.log
+  to_syslog: yes
+  timestamp: on
+}
+

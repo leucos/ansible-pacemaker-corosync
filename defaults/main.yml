@@ -1,0 +1,2 @@
+pacemaker_corosync_group: false
+pacemaker_corosync_ring_interface: false

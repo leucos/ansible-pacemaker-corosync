@@ -43,6 +43,11 @@
     mode: 0644
     owner: root
 
+- name: Creates services directory
+  file:
+    path: /etc/corosync/service.d/
+    state: directory
+
 - name: Adds pacemaker service
   copy:
     src: pcmk

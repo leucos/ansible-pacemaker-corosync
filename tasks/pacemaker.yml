@@ -1,5 +1,5 @@
 - name: Installs pacemaker & corosync
-  apt: pkg={{item}} state=latest
+  apt: pkg={{item}} state=present
   with_items:
     - corosync
     - pacemaker

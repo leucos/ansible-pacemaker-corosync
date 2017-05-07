@@ -1,5 +1,5 @@
 - name: Restart corosync
-  service: 
+  service:
     name: "{{ item }}"
     state: restarted
   with_items:
